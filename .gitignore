@@ -1,0 +1,23 @@
+# Ignore specific Python scripts
+Formatter_V1.py
+Formatter_V1_GUI.py
+
+# Ignore the virtual environment folder
+venv/
+
+# Ignore icon file
+icon.ico
+icon.png
+
+# Ignore distribution folder
+dist/
+
+# Ignore Python bytecode files
+*.pyc
+*.pyo
+
+# Ignore pyinstaller spec files
+*.spec
+
+# Ignore VSCode settings
+.vscode/
