@@ -31,6 +31,6 @@ AI Dungeon Scenario Saver is a browser extension that automates the process of c
 
 - **Multiple Captures**: The extension may capture the same response multiple times due to the way it’s set up, which results in saving the scenario multiple times.
 - **Failed Capture**: Sometimes, the extension may fail to capture the response on the first try. You may need to click the “Save Scenario” button again to successfully save the file.
-- **Limited to Scenarios**: Currently, the extension works for capturing scenarios but does not support capturing adventures. Work is underway to extend compatibility to adventures.
+~~- **Limited to Scenarios**: Currently, the extension works for capturing scenarios but does not support capturing adventures. Work is underway to extend compatibility to adventures.~~
 
 These issues are primarily noticeable in the developer console and do not affect the core functionality of the extension.

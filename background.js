@@ -1,9 +1,11 @@
 // Initialize a Set to store unique document IDs (to prevent duplicates)
 const capturedRequestIds = new Set();
 const targetOperationName = "GetScenario";
+const targetOperationNameAdventure = "GetAdventure";
 // Debugger variables
 let targetTabId;
-let captureTimer;
+const inactivityThreshold = 180000; // 3 minutes (in milliseconds)
+let lastCaptureTime = Date.now(); // Track the last capture time
 const processedRequestIds = new Set();
 // // Initialize an array to store captured requests
 let capturedRequests = [];
@@ -55,9 +57,16 @@ chrome.debugger.onEvent.addListener((source, method, params) => {
                           //console.log("Captured response:", body);
 
                           // Only save if it contains the expected data
-                          if (body.data && body.data.scenario) {
-                              saveResponseToFile(body);
-                          }
+                          // Only save if it contains the expected data
+                          if (body.data) {
+                            if (body.data.scenario) {
+                                // If scenario is present, process it
+                                saveResponseToFile(body, "scenario");
+                            } else if (body.data.adventure) {
+                                // If adventure is present, process it
+                                saveResponseToFile(body, "adventure");
+                            }
+                        }
                       } catch (jsonError) {
                           // If parsing fails, log it but don't process it as JSON
                           //console.log("Non-JSON response body, skipping:", jsonError.message);
@@ -203,53 +212,67 @@ chrome.debugger.onEvent.addListener((source, method, params) => {
 
 
 // Function to save the response JSON to a file
-function saveResponseToFile(response) {
-  try {
-      const jsonContent = JSON.stringify(response, null, 2);
-
-      // Extract the title from the response
-      const scenarioTitle = response.data.scenario.title;
-
-      // Sanitize the title to ensure it's a valid filename
-      const sanitizedTitle = scenarioTitle.replace(/[\/:*?"<>|]/g, "_");
-
-      // Check if the file has already been saved recently
-      const currentTimestamp = Date.now();
-      if (savedFiles[sanitizedTitle]) {
-          const lastSavedTimestamp = savedFiles[sanitizedTitle];
-
-          // If the file was saved recently (within the threshold), skip saving it
-          if (currentTimestamp - lastSavedTimestamp < saveThreshold) {
-              //console.log(`File ${sanitizedTitle}.json already saved recently. Skipping save.`);
-              return;
-          }
+function saveResponseToFile(response, type) {
+    try {
+        const jsonContent = JSON.stringify(response, null, 2);
+  
+        // Extract the title from the response based on the type (scenario or adventure)
+        let title = "";
+        if (type === "scenario") {
+            title = response.data.scenario.title;
+        } else if (type === "adventure") {
+            title = response.data.adventure.title; // Use the adventure title for naming
+        }
+  
+        // Sanitize the title to ensure it's a valid filename
+        const sanitizedTitle = title.replace(/[\/:*?"<>|]/g, "_");
+  
+        // Check if the file has already been saved recently (within threshold)
+        const currentTimestamp = Date.now();
+        if (savedFiles[sanitizedTitle]) {
+            const lastSavedTimestamp = savedFiles[sanitizedTitle];
+  
+            // If the file was saved recently (within the threshold), skip saving it
+            if (currentTimestamp - lastSavedTimestamp < saveThreshold) {
+                //console.log(`File ${sanitizedTitle}.json already saved recently. Skipping save.`);
+                return;
+            }
+        }
+  
+        // Save the file with the scenario or adventure title as the filename
+        chrome.downloads.download({
+            url: `data:application/json;charset=utf-8,${encodeURIComponent(jsonContent)}`,
+            filename: `${sanitizedTitle}.json`,
+            saveAs: false,
+        });
+  
+        // Update the savedFiles object with the new timestamp
+        savedFiles[sanitizedTitle] = currentTimestamp;
+  
+        //console.log("Response saved to file with title:", sanitizedTitle);
+    } catch (error) {
+        //console.error("Error saving response to file:", error);
+    }
+  }
+  
+  // Fallback: Disable the debugger if nothing is captured in the last 3 minutes
+  setInterval(() => {
+      const currentTime = Date.now();
+      if (currentTime - lastCaptureTime > inactivityThreshold && targetTabId) {
+          chrome.debugger.detach({ tabId: targetTabId }, () => {
+              //console.log("Debugger detached due to inactivity");
+          });
       }
-
-      // Save the file with the scenario title as the filename
-      chrome.downloads.download({
-          url: `data:application/json;charset=utf-8,${encodeURIComponent(jsonContent)}`,
-          filename: `${sanitizedTitle}.json`,
-          saveAs: false,
-      });
-
-      // Update the savedFiles object with the new timestamp
-      savedFiles[sanitizedTitle] = currentTimestamp;
-
-      //console.log("Response saved to file with title:", sanitizedTitle);
-  } catch (error) {
-      //console.error("Error saving response to file:", error);
-  }
-}
-
-
-// Detach debugger on extension unload
-chrome.runtime.onSuspend.addListener(() => {
-  if (targetTabId) {
-      chrome.debugger.detach({ tabId: targetTabId }, () => {
-          //console.log("Debugger detached");
-      });
-  }
-});
+  }, inactivityThreshold);
+  
+  // Detach debugger on extension unload
+  chrome.runtime.onSuspend.addListener(() => {
+    if (targetTabId) {
+        chrome.debugger.detach({ tabId: targetTabId }, () => {
+            //console.log("Debugger detached");
+        });
+    }
+  });
 
 // // Debugging: log captured responses periodically (optional)
 // setInterval(() => {
