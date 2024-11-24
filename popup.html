@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>AI Dungeon Scenario Capturer</title>
+  <style>
+    body {
+      width: 300px; /* Wider popup */
+      padding: 10px;
+      background-color: #212121;
+      color: white;
+      font-family: Arial, sans-serif;
+      border-radius: 15px;
+      box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    h4 {
+      text-align: center;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+    p {
+      font-size: 12px;
+      color: #aaa;
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    button {
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 15px; /* Rounded edges */
+      cursor: pointer;
+      font-size: 14px;
+      margin: 10px auto;
+      width: 100%;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <h4>AI Dungeon Scenario Capturer</h4>
+  <p>This button refreshes the page to capture your scenario. If it doesn't work, try again until it saves.</p>
+  <button id="refreshAndSave">Save Scenario</button>
+  <script src="popup.js"></script>
+</body>
+</html>

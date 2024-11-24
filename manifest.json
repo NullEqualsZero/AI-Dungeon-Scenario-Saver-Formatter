@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "AI Dungeon Scenario Capturer",
+  "version": "1.1",
+  "description": "An extension to capture and automate scenario data from AI Dungeon.",
+  "permissions": [
+    "tabs",
+    "debugger",
+    "downloads",
+    "activeTab"
+  ],
+  "host_permissions": ["<all_urls>"],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}
