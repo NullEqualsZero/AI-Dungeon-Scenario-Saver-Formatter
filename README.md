@@ -1,5 +1,10 @@
 # AI Dungeon Scenario Formatter
 
+## License
+
+This project is licensed under the MIT License. If you use this project for commercial purposes or modify it, **appropriate credit must be given to the original author (NullEqualsZero)**, and you must inform the author about its usage. See the `LICENSE` file for details.
+
+
 ## Overview
 
 The **AI Dungeon Scenario Formatter** is a tool designed to format AI Dungeon scenario JSON files into human-readable TXT and MD files. It simplifies the process of viewing and sharing your saved scenarios with clean formatting and easy access to the scenario data.
@@ -27,8 +32,25 @@ This added functionality makes it easier to manage scenarios and additional stor
 3. **Save Output**: The tool generates both a TXT and a Markdown (MD) file with the formatted scenario data.
 
 ### Usage Instructions
+1. **Run the application**:
+   - On Windows: Double-click the executable.
+   - On other platforms: Run the script using Python (`python script_name.py`).
 
-1. Download and run the **AI Dungeon Scenario Formatter** EXE.
-2. Choose the scenario JSON file you wish to format.
-3. Click "Convert" to generate the TXT and MD files.
-4. Save the files to your preferred location.
+2. **Step 1: Input Directory**:
+   - Select the folder containing JSON files to process.
+   - Enable or disable "Skip Extra Story Cards" as needed.
+   - Click **Next** or **Start Processing**.
+
+3. **Step 2: Assign Extra Cards** (if not skipped):
+   - For each JSON file, select an additional JSON file for extra story cards.
+   - Click **Start Processing**.
+
+4. **Processing**:
+   - The app formats the stories and saves the output in a new folder named `Scenarios_Formatted` next to the input folder.
+
+## Output
+- Formatted `.txt` and `.md` files are saved in the output directory.
+
+## Requirements
+- Python 3.6 or higher
+- `tkinter` module (pre-installed with Python)
