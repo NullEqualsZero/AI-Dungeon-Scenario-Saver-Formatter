@@ -6,7 +6,7 @@ Formatter_V1_GUI.py
 venv/
 
 # Ignore icon file
-icon.ico
+# icon.ico
 icon.png
 
 # Ignore distribution folder
