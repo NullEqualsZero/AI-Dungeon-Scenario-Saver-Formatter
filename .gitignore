@@ -5,6 +5,9 @@ Formatter_V1_GUI.py
 # Ignore the virtual environment folder
 venv/
 
+# Exe-fication folder
+build/
+
 # Ignore icon file
 # icon.ico
 icon.png
@@ -21,3 +24,6 @@ dist/
 
 # Ignore VSCode settings
 .vscode/
+
+# Old Code
+Depricated_*
