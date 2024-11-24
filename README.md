@@ -1,5 +1,10 @@
 # AI Dungeon Scenario Saver
 
+## License
+
+This project is licensed under the MIT License. If you use this project for commercial purposes or modify it, **appropriate credit must be given to the original author (NullEqualsZero)**, and you must inform the author about its usage. See the `LICENSE` file for details.
+
+
 ## Overview
 
 AI Dungeon Scenario Saver is a browser extension that automates the process of capturing and saving AI Dungeon scenarios. It uses the browser’s debugging tools to capture the required data and save it as a file on your computer.
@@ -29,7 +34,3 @@ AI Dungeon Scenario Saver is a browser extension that automates the process of c
 - **Limited to Scenarios**: Currently, the extension works for capturing scenarios but does not support capturing adventures. Work is underway to extend compatibility to adventures.
 
 These issues are primarily noticeable in the developer console and do not affect the core functionality of the extension.
-
----
-
-This version includes the new issue regarding adventures and keeps the rest of the information concise and user-focused.
