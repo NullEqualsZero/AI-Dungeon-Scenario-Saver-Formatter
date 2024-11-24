@@ -1,36 +1,47 @@
 # AI Dungeon Scenario Saver
 
+## Latest Release Notes
+
+**Version 1.1.0**
+- Added a toggle switch to enable or disable the extension.
+- Improved clarity and efficiency in how scenarios are captured and saved.
+- Refactored code to remove unnecessary elements and streamline functionality.
+  
 ## License
 
 This project is licensed under the MIT License. If you use this project for commercial purposes or modify it, **appropriate credit must be given to the original author (NullEqualsZero)**, and you must inform the author about its usage. See the `LICENSE` file for details.
 
-
 ## Overview
 
-AI Dungeon Scenario Saver is a browser extension that automates the process of capturing and saving AI Dungeon scenarios. It uses the browser’s debugging tools to capture the required data and save it as a file on your computer.
+AI Dungeon Scenario Saver is a browser extension that automates the process of capturing and saving AI Dungeon scenarios. It leverages the browser’s debugging tools to detect and extract the necessary data seamlessly.
 
 ## Features
 
-- **Automatic Scenario Capture**: Refreshes the page and captures the scenario data automatically.
-- **Save to File**: After capturing the scenario, it saves the data as a file on your computer.
-- **Customizable**: Can be easily adapted for use with different configurations if needed.
+- **Toggle for Debugging**: Enable or disable the extension with a switch, ensuring peace of mind for users wary of debugging tools.
+- **Automatic Scenario Capture**: Efficiently captures the scenario data when the page is refreshed.
+- **Save to File**: Automatically saves the captured data as a JSON file.
+- **Streamlined Functionality**: Clean and efficient code base for better performance.
 
 ## How It Works
 
-1. **Page Refresh**: The extension will refresh the page to capture the latest AI Dungeon scenario.
-2. **Scenario Capture**: After refreshing, the extension listens for the appropriate GraphQL response that contains the scenario data.
-3. **Saving**: Once the response is captured, the extension saves it as a JSON file on your computer.
+1. **Enable the Extension**: Use the toggle switch to enable or disable the extension as needed.
+2. **Page Monitoring**: Once enabled, the extension monitors AI Dungeon pages for specific GraphQL responses.
+3. **Scenario Capture**: It identifies and captures the relevant data from the server responses.
+4. **Automatic Saving**: The data is saved as a JSON file on your computer with a sanitized filename based on the scenario title.
 
 ### Important Notes
 
-- The extension works with google debugging. So when you click on save a pop up will appear like this.
-- ![image](https://github.com/user-attachments/assets/61a1e6a0-c427-4f0a-b397-7ebfc6a90f99)
-- If you encounter issues, make an issue here and I will try to fix them.
+- **Debugger Permissions**: Since the extension uses Chrome debugging tools, it may request permissions to attach to your active tab. This is essential for capturing the data.
+- **File Saving**: Files are automatically saved without the need for additional prompts.
 
-## Known Issues
+## Issues Addressed
 
-- **Multiple Captures**: The extension may capture the same response multiple times due to the way it’s set up, which results in saving the scenario multiple times.
-- **Failed Capture**: Sometimes, the extension may fail to capture the response on the first try. You may need to click the “Save Scenario” button again to successfully save the file.
-~~- **Limited to Scenarios**: Currently, the extension works for capturing scenarios but does not support capturing adventures. Work is underway to extend compatibility to adventures.~~
+- Duplicate captures and excessive file saves have been resolved by adding a threshold mechanism to prevent saving the same data repeatedly within a short period.
+- Fixed occasional failure to capture responses on the first attempt by ensuring robust data monitoring and handling.
+- **Full Compatibility**: Both scenarios and adventures are now supported for saving.
 
-These issues are primarily noticeable in the developer console and do not affect the core functionality of the extension.
+## Support
+
+If you encounter any issues or have suggestions for improvement, please create an issue in this repository. I’ll do my best to address them promptly.
+
+Enjoy seamless AI Dungeon scenario saving!
