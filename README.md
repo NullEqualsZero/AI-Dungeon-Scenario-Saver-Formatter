@@ -1,7 +1,3 @@
-Here's the updated README with the additional known issue:
-
----
-
 # AI Dungeon Scenario Saver
 
 ## Overview
