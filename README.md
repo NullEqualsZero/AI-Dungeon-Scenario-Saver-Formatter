@@ -2,6 +2,10 @@
 
 ## Latest Release Notes
 
+**Version 1.2.0**
+- Debugger now detaches (removing the page debugger warning) much faster. 
+- Debugger now detaches automatically after a file is saved.
+
 **Version 1.1.0**
 - Added a toggle switch to enable or disable the extension.
 - Improved clarity and efficiency in how scenarios are captured and saved.
