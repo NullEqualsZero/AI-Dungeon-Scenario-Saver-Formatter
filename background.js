@@ -11,96 +11,91 @@ let extensionEnabled = false; // Toggle state of the extension
 
 // Handle toggle messages from the popup
 chrome.runtime.onMessage.addListener((message) => {
-	if (message.action === "enableExtension") {
-		extensionEnabled = true;
-		console.log("Extension enabled");
-	}
+    if (message.action === "enableExtension") {
+        extensionEnabled = true;
+        console.log("Extension enabled");
+    }
 
-	if (message.action === "disableExtension") {
-		extensionEnabled = false;
-		console.log("Extension disabled");
+    if (message.action === "disableExtension") {
+        extensionEnabled = false;
+        console.log("Extension disabled");
 
-		if (targetTabId) {
-			chrome.debugger.detach({
-				tabId: targetTabId
-			}, () => {
-				console.log("Debugger detached as part of disabling the extension");
-			});
-		}
-	}
+        if (targetTabId) {
+            chrome.debugger.detach({ tabId: targetTabId }, () => {
+                console.log("Debugger detached as part of disabling the extension");
+            });
+        }
+    }
 });
 
 // Attach debugger to the tab
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-	if (!extensionEnabled) return;
+    if (!extensionEnabled) return;
 
-	if (tab.url?.includes("aidungeon.com") && changeInfo.status === "complete") {
-		if (targetTabId && targetTabId !== tabId) {
-			chrome.debugger.detach({
-				tabId: targetTabId
-			}, () => {
-				console.log("Debugger detached from previous tab");
-			});
-		}
+    if (tab.url?.includes("aidungeon.com") && changeInfo.status === "complete") {
+        if (targetTabId && targetTabId !== tabId) {
+            chrome.debugger.detach({ tabId: targetTabId }, () => {
+                console.log("Debugger detached from previous tab");
+            });
+        }
 
-		targetTabId = tabId;
+        targetTabId = tabId;
 
-		chrome.debugger.attach({
-			tabId: targetTabId
-		}, "1.3", () => {
-			console.log("Debugger attached");
+        chrome.debugger.attach({ tabId: targetTabId }, "1.3", () => {
+            console.log("Debugger attached");
 
-			chrome.debugger.sendCommand({
-				tabId: targetTabId
-			}, "Network.enable", {}, () => {
-				console.log("Network debugging enabled");
-			});
-		});
-	}
+            chrome.debugger.sendCommand({ tabId: targetTabId }, "Network.enable", {}, () => {
+                console.log("Network debugging enabled");
+            });
+        });
+    }
 });
 
+// Listen for network events and handle responses
 chrome.debugger.onEvent.addListener((source, method, params) => {
     if (!extensionEnabled) return;
-  
+
     if (method === "Network.responseReceived") {
-      chrome.debugger.sendCommand(
-        { tabId: source.tabId },
-        "Network.getResponseBody",
-        { requestId: params.requestId },
-        (response) => {
-          if (chrome.runtime.lastError) return;
-          try {
-            if (response?.body) {
-              // Check if the body is valid JSON
-              if (isJSON(response.body)) {
-                const body = JSON.parse(response.body);
-  
-                if (body.data?.scenario) {
-                  saveResponseToFile(body, "scenario");
-                } else if (body.data?.adventure) {
-                  saveResponseToFile(body, "adventure");
+        chrome.debugger.sendCommand(
+            { tabId: source.tabId },
+            "Network.getResponseBody",
+            { requestId: params.requestId },
+            (response) => {
+                if (chrome.runtime.lastError) return;
+
+                try {
+                    if (response?.body) {
+                        // Check if the body is valid JSON
+                        if (isJSON(response.body)) {
+                            const body = JSON.parse(response.body);
+
+                            // Handle specific response types (scenario, adventure)
+                            if (body.data?.scenario) {
+                                saveResponseToFile(body, "scenario");
+                            } else if (body.data?.adventure) {
+                                saveResponseToFile(body, "adventure");
+                            }
+                        } else {
+                            console.warn("Response body is not valid JSON, skipping:", response.body);
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error handling response body:", error);
                 }
-              } else {
-                console.warn("Response body is not valid JSON, skipping:", response.body);
-              }
             }
-          } catch (error) {
-            console.error("Error handling response body:", error);
-          }
-        }
-      );
+        );
     }
-  });
-  
-  // Helper function to check if a string is valid JSON
-  function isJSON(str) {
+});
+
+// Helper function to check if a string is valid JSON
+function isJSON(str) {
     try {
-      JSON.parse(str);
-      return true;
+        JSON.parse(str);
+        return true;
     } catch (e) {
-      return false;
+        return false;
     }
-  }
+}
 
 // Function to save the response JSON to a file
 function saveResponseToFile(response, type) {
@@ -124,7 +119,10 @@ function saveResponseToFile(response, type) {
         savedFiles[sanitizedTitle] = currentTimestamp;
         console.log(`Response saved as: ${sanitizedTitle}.json`);
 
-        // Disable the extension and detach debugger
+        // Reset the last capture time to avoid unnecessary timeouts
+        lastCaptureTime = Date.now();
+
+        // Disable the extension and detach debugger after saving
         extensionEnabled = false;
         if (targetTabId) {
             chrome.debugger.detach({ tabId: targetTabId }, () => {
@@ -136,28 +134,23 @@ function saveResponseToFile(response, type) {
     }
 }
 
-
-// Fallback: Disable the debugger if inactive for 3 minutes
+// Fallback: Disable the debugger if inactive for the threshold period
 setInterval(() => {
-	if (!extensionEnabled) return;
+    if (!extensionEnabled) return;
 
-	const currentTime = Date.now();
-	if (currentTime - lastCaptureTime > inactivityThreshold && targetTabId) {
-		chrome.debugger.detach({
-			tabId: targetTabId
-		}, () => {
-			console.log("Debugger detached due to inactivity");
-		});
-	}
+    const currentTime = Date.now();
+    if (currentTime - lastCaptureTime > inactivityThreshold && targetTabId) {
+        chrome.debugger.detach({ tabId: targetTabId }, () => {
+            console.log("Debugger detached due to inactivity");
+        });
+    }
 }, inactivityThreshold);
 
 // Detach debugger on extension unload
 chrome.runtime.onSuspend.addListener(() => {
-	if (targetTabId) {
-		chrome.debugger.detach({
-			tabId: targetTabId
-		}, () => {
-			console.log("Debugger detached on extension unload");
-		});
-	}
+    if (targetTabId) {
+        chrome.debugger.detach({ tabId: targetTabId }, () => {
+            console.log("Debugger detached on extension unload");
+        });
+    }
 });
