@@ -1,6 +1,6 @@
 // Debugger variables
 let targetTabId;
-const inactivityThreshold = 3 * 60 * 1000; // 3 minutes
+const inactivityThreshold = 30 * 1000; // 30 Seconds inactivity time out threshold
 let lastCaptureTime = Date.now(); // Track the last capture time
 
 // Object to track saved files and their timestamps
@@ -104,29 +104,38 @@ chrome.debugger.onEvent.addListener((source, method, params) => {
 
 // Function to save the response JSON to a file
 function saveResponseToFile(response, type) {
-	try {
-		const jsonContent = JSON.stringify(response, null, 2);
-		const title = type === "scenario" ? response.data.scenario.title : response.data.adventure.title;
+    try {
+        const jsonContent = JSON.stringify(response, null, 2);
+        const title = type === "scenario" ? response.data.scenario.title : response.data.adventure.title;
 
-		const sanitizedTitle = title.replace(/[\/:*?"<>|]/g, "_");
+        const sanitizedTitle = title.replace(/[\/:*?"<>|]/g, "_");
 
-		const currentTimestamp = Date.now();
-		if (savedFiles[sanitizedTitle] && currentTimestamp - savedFiles[sanitizedTitle] < saveThreshold) {
-			return;
-		}
+        const currentTimestamp = Date.now();
+        if (savedFiles[sanitizedTitle] && currentTimestamp - savedFiles[sanitizedTitle] < saveThreshold) {
+            return;
+        }
 
-		chrome.downloads.download({
-			url: `data:application/json;charset=utf-8,${encodeURIComponent(jsonContent)}`,
-			filename: `${sanitizedTitle}.json`,
-			saveAs: false,
-		});
+        chrome.downloads.download({
+            url: `data:application/json;charset=utf-8,${encodeURIComponent(jsonContent)}`,
+            filename: `${sanitizedTitle}.json`,
+            saveAs: false,
+        });
 
-		savedFiles[sanitizedTitle] = currentTimestamp;
-		console.log(`Response saved as: ${sanitizedTitle}.json`);
-	} catch (error) {
-		console.error("Error saving response to file:", error);
-	}
+        savedFiles[sanitizedTitle] = currentTimestamp;
+        console.log(`Response saved as: ${sanitizedTitle}.json`);
+
+        // Disable the extension and detach debugger
+        extensionEnabled = false;
+        if (targetTabId) {
+            chrome.debugger.detach({ tabId: targetTabId }, () => {
+                console.log("Debugger detached after saving the file.");
+            });
+        }
+    } catch (error) {
+        console.error("Error saving response to file:", error);
+    }
 }
+
 
 // Fallback: Disable the debugger if inactive for 3 minutes
 setInterval(() => {
