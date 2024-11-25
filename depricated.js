@@ -1,191 +1,193 @@
-// Initialize a Set to store unique document IDs (to prevent duplicates)
-const capturedRequestIds = new Set();
-const targetOperationName = "GetScenario";
 // Debugger variables
 let targetTabId;
-// // Initialize an array to store captured requests
-let capturedRequests = [];
+const inactivityThreshold = 30 * 1000; // 30 Seconds inactivity timeout threshold
+let lastCaptureTime = Date.now(); // Track the last capture time
 
-// Attach debugger only to tabs with the AI Dungeon URL
+// Object to track saved files and their timestamps
+const savedFiles = {};
+const saveThreshold = 5 * 1000; // 5 seconds threshold
+
+let extensionEnabled = false; // Toggle state of the extension
+
+// Object to track response chunks by requestId
+let responseChunks = {};
+
+// Handle toggle messages from the popup
+chrome.runtime.onMessage.addListener((message) => {
+    if (message.action === "enableExtension") {
+        extensionEnabled = true;
+        console.log("Extension enabled");
+    }
+
+    if (message.action === "disableExtension") {
+        extensionEnabled = false;
+        console.log("Extension disabled");
+
+        if (targetTabId) {
+            chrome.debugger.detach({ tabId: targetTabId }, () => {
+                console.log("Debugger detached as part of disabling the extension");
+            });
+        }
+    }
+});
+
+// Attach debugger to the tab
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (tab.url && tab.url.includes("aidungeon.com") && changeInfo.status === "complete") {
-      // Detach debugger if already attached to another tab
-      if (targetTabId && targetTabId !== tabId) {
-          chrome.debugger.detach({ tabId: targetTabId }, () => {
-              console.log("Debugger detached from previous tab");
-          });
-      }
+    if (!extensionEnabled) return;
 
-      targetTabId = tabId;
+    if (tab.url?.includes("aidungeon.com") && changeInfo.status === "complete") {
+        if (targetTabId && targetTabId !== tabId) {
+            chrome.debugger.detach({ tabId: targetTabId }, () => {
+                console.log("Debugger detached from previous tab");
+            });
+        }
 
-      chrome.debugger.attach({ tabId: targetTabId }, "1.3", (err) => {
-          if (chrome.runtime.lastError) {
-              console.warn("Debugger already attached or error:", chrome.runtime.lastError.message);
-              return;
-          }
+        targetTabId = tabId;
 
-          console.log("Debugger attached to tab:", targetTabId);
+        chrome.debugger.attach({ tabId: targetTabId }, "1.3", () => {
+            console.log("Debugger attached");
 
-          chrome.debugger.sendCommand(
-              { tabId: targetTabId },
-              "Network.enable",
-              {},
-              () => console.log("Network debugging enabled")
-          );
-      });
-  }
+            chrome.debugger.sendCommand({ tabId: targetTabId }, "Network.enable", {}, () => {
+                console.log("Network debugging enabled");
+            });
+        });
+    }
 });
 
-// Listen for network events and handle responses
+// Listen for network events using a combination of responseReceived, dataReceived, and loadingFinished
 chrome.debugger.onEvent.addListener((source, method, params) => {
-  if (method === "Network.responseReceived") {
-      chrome.debugger.sendCommand(
-          { tabId: source.tabId },
-          "Network.getResponseBody",
-          { requestId: params.requestId },
-          (response) => {
-              try {
-                  if (response && response.body && params.response.url.includes("/graphql")) {
-                      const body = JSON.parse(response.body);
+    if (!extensionEnabled) return;
 
-                      // Filter responses that match the target operation name
-                      if (body.data && body.data.scenario) {
-                          console.log("Filtered GraphQL response:", body.data);
-                          saveResponseToFile(body.data); // Save valid responses to a file
-                      }
-                  }
-              } catch (error) {
-                  console.error("Error parsing response body:", error);
-              }
-          }
-      );
-  }
+    if (method === "Network.responseReceived") {
+        const { requestId, response } = params;
+        if (response.url.includes("graphql")) { // Filter for GraphQL responses
+            responseChunks[requestId] = [];
+        }
+    }
+
+    if (method === "Network.dataReceived") {
+        const chunk = responseChunks[params.requestId];
+        if (chunk) {
+            chunk.push(params.dataLength); // Add chunk size to the buffer
+        }
+    }
+
+    if (method === "Network.loadingFinished") {
+        const chunks = responseChunks[params.requestId];
+        if (chunks) {
+            handleLargeResponse(source.tabId, params.requestId);
+            delete responseChunks[params.requestId];
+        }
+    }
 });
 
-// Function to capture and handle requests
-function captureRequest(details) {
-  // Check if the request is already captured
-  if (capturedRequestIds.has(details.documentId)) {
-      console.log("Duplicate request ignored:", details.documentId);
-      return;
-  }
+// Function to handle potentially large responses
+function handleLargeResponse(tabId, requestId) {
+    chrome.debugger.sendCommand(
+        { tabId },
+        "Network.getResponseBody",
+        { requestId },
+        (response) => {
+            if (chrome.runtime.lastError) {
+                console.error("Failed to get response body:", chrome.runtime.lastError);
+                return;
+            }
 
-  // Add the documentId to the Set to prevent future duplicates
-  capturedRequestIds.add(details.documentId);
+            if (response?.body) {
+                try {
+                    // Parse the JSON response
+                    if (isJSON(response.body)) {
+                        const body = JSON.parse(response.body);
 
-  // Decode the request body if available
-  let decodedBody = null;
-  if (details.requestBody && details.requestBody.raw) {
-      try {
-          // The requestBody.raw is an array of ArrayBuffers; decode it
-          const rawBytes = details.requestBody.raw[0].bytes;
-          decodedBody = new TextDecoder("utf-8").decode(rawBytes);
-      } catch (error) {
-          console.error("Error decoding request body:", error);
-      }
-  }
-
-  // Log the detected GraphQL request with decoded body
-  console.log("GraphQL request detected:", {
-      ...details,
-      decodedBody,
-  });
-
-  // Save the decoded request details to the capturedRequests array
-  capturedRequests.push({
-      ...details,
-      decodedBody,
-  });
-
-  // Save the captured request to a file
-  saveRequestToFile({ ...details, decodedBody });
+                        // Filter and save only the required responses
+                        if (body?.data?.scenario) {
+                            console.log("Captured Scenario Response:", body);
+                            saveResponseToFile(body, "scenario");
+                        } else if (body?.data?.adventure) {
+                            console.log("Captured Adventure Response:", body);
+                            saveResponseToFile(body, "adventure");
+                        } else {
+                            console.log("Ignored response:", body);
+                        }
+                    } else {
+                        console.warn("Response body is not valid JSON:", response.body);
+                    }
+                } catch (error) {
+                    console.error("Error processing response body:", error);
+                }
+            } else {
+                console.warn("Response body not available or too large to capture.");
+            }
+        }
+    );
 }
 
-// Function to capture and handle requests
-function captureRequest(details) {
-  // Decode the request body if available
-  let decodedBody = null;
-  if (details.requestBody && details.requestBody.raw) {
-      try {
-          const rawBytes = details.requestBody.raw[0].bytes;
-          decodedBody = new TextDecoder("utf-8").decode(rawBytes);
-      } catch (error) {
-          console.error("Error decoding request body:", error);
-      }
-  }
-
-  // Parse the body and check if it matches the target operationName
-  if (decodedBody) {
-      try {
-          const parsedBody = JSON.parse(decodedBody);
-          if (parsedBody.operationName === targetOperationName) {
-              console.log("Intercepted request with operationName:", parsedBody.operationName);
-              
-              // Store the request details for later use when the response is received
-              requestDetailsMap[details.requestId] = details;
-          }
-      } catch (error) {
-          console.error("Error parsing request body:", error);
-      }
-  }
+// Helper function to check if a string is valid JSON
+function isJSON(str) {
+    try {
+        JSON.parse(str);
+        return true;
+    } catch (e) {
+        return false;
+    }
 }
 
-// Listen for network events and filter responses
-chrome.debugger.onEvent.addListener((source, method, params) => {
-  if (method === "Network.responseReceived") {
-      chrome.debugger.sendCommand(
-          { tabId: source.tabId },
-          "Network.getResponseBody",
-          { requestId: params.requestId },
-          (response) => {
-              try {
-                  if (params.response.url.includes("/graphql")) {
-                      const body = JSON.parse(response.body);
-                      console.log("Captured response:", body);
+// Function to save the response JSON to a file
+function saveResponseToFile(response, type) {
+    try {
+        const jsonContent = JSON.stringify(response, null, 2);
+        const title = type === "scenario" 
+            ? response.data.scenario.title 
+            : response.data.adventure.title;
 
-                      // Check for the target operationName
-                      if (body.data && body.data.operationName === targetOperationName) {
-                          saveResponseToFile(body.data);
-                      }
-                  }
-              } catch (error) {
-                  console.error("Error parsing response body:", error);
-              }
-          }
-      );
-  }
-});
+        const sanitizedTitle = title.replace(/[\/:*?"<>|]/g, "_");
 
+        const currentTimestamp = Date.now();
+        if (savedFiles[sanitizedTitle] && currentTimestamp - savedFiles[sanitizedTitle] < saveThreshold) {
+            return;
+        }
 
-// Function to save the filtered response JSON to a file
-function saveResponseToFile(response) {
-  try {
-      const jsonContent = JSON.stringify(response, null, 2);
+        chrome.downloads.download({
+            url: `data:application/json;charset=utf-8,${encodeURIComponent(jsonContent)}`,
+            filename: `${sanitizedTitle}_${currentTimestamp}.json`,
+            saveAs: false,
+        });
 
-      chrome.downloads.download({
-          url: `data:application/json;charset=utf-8,${encodeURIComponent(jsonContent)}`,
-          filename: `graphql_response_${Date.now()}.json`,
-          saveAs: false,
-      });
+        savedFiles[sanitizedTitle] = currentTimestamp;
+        console.log(`Response saved as: ${sanitizedTitle}.json`);
 
-      console.log("Response saved to file");
-  } catch (error) {
-      console.error("Error saving response to file:", error);
-  }
+        // Reset the last capture time to avoid unnecessary timeouts
+        lastCaptureTime = Date.now();
+
+        // Disable the extension and detach debugger after saving
+        extensionEnabled = false;
+        if (targetTabId) {
+            chrome.debugger.detach({ tabId: targetTabId }, () => {
+                console.log("Debugger detached after saving the file.");
+            });
+        }
+    } catch (error) {
+        console.error("Error saving response to file:", error);
+    }
 }
 
-// Detach debugger when the extension is suspended
-chrome.runtime.onSuspend.addListener(() => {
-  if (targetTabId) {
-      chrome.debugger.detach({ tabId: targetTabId }, () => {
-          console.log("Debugger detached on suspend");
-      });
-  }
-});
-
-
-// Debugging: log captured responses periodically (optional)
+// Fallback: Disable the debugger if inactive for the threshold period
 setInterval(() => {
-  console.log("Captured Responses:", capturedResponses);
-}, 10000);
+    if (!extensionEnabled) return;
 
+    const currentTime = Date.now();
+    if (currentTime - lastCaptureTime > inactivityThreshold && targetTabId) {
+        chrome.debugger.detach({ tabId: targetTabId }, () => {
+            console.log("Debugger detached due to inactivity");
+        });
+    }
+}, inactivityThreshold);
+
+// Detach debugger on extension unload
+chrome.runtime.onSuspend.addListener(() => {
+    if (targetTabId) {
+        chrome.debugger.detach({ tabId: targetTabId }, () => {
+            console.log("Debugger detached on extension unload");
+        });
+    }
+});

@@ -6,10 +6,11 @@
   "permissions": [
     "tabs",
     "debugger",
-    "downloads",
-    "activeTab"
+    "downloads"
   ],
-  "host_permissions": ["<all_urls>"],
+  "host_permissions": [
+    "https://*.aidungeon.com/*"
+  ],
   "action": {
     "default_popup": "popup.html"
   },
