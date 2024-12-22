@@ -26,4 +26,6 @@ dist/
 .vscode/
 
 # Old Code
-Depricated_*
+Deprecated_*
+
+Depricated/

@@ -3,6 +3,7 @@ from tkinter import filedialog, messagebox
 import os
 import json
 
+
 class StoryFormatterApp:
     def __init__(self, root):
         self.root = root
@@ -11,7 +12,7 @@ class StoryFormatterApp:
         self.input_dir = None
         self.output_dir = None
         self.files = []
-        self.extra_cards_enabled = tk.BooleanVar(value=False)
+        self.extra_cards_disenabled = tk.BooleanVar(value=True)
         self.extra_cards_paths = {}
         self.file_widgets = {}  # Initialize this here to prevent attribute errors
         
@@ -41,7 +42,7 @@ class StoryFormatterApp:
         self.extra_cards_checkbox = tk.Checkbutton(
             self.step1_frame,
             text="Skip Extra Story Cards",
-            variable=self.extra_cards_enabled,
+            variable=self.extra_cards_disenabled,
             command=self.update_next_button_text  # Call this when checkbox is toggled
         )
         self.extra_cards_checkbox.pack(anchor="w", pady=5)
@@ -51,7 +52,7 @@ class StoryFormatterApp:
 
     def update_next_button_text(self):
         # Change the button text to "Start Processing" if checkbox is checked
-        if self.extra_cards_enabled.get():
+        if self.extra_cards_disenabled.get():
             print("Checkbox is checked - changing button text to 'Start Processing'")
             self.create_next_button(self.process_files, text="Start Processing", frame=self.step1_frame)
         else:
@@ -113,7 +114,7 @@ class StoryFormatterApp:
             return
 
         # Handle the checkbox state
-        if self.extra_cards_enabled.get():
+        if self.extra_cards_disenabled.get():
             print("Skip Extra Story Cards is checked. Passing None for all extra cards.")
             self.extra_cards_paths = {file: None for file in self.files}  # Set None for all extra cards
             self.process_files()  # Process files directly
@@ -166,7 +167,7 @@ class StoryFormatterApp:
                 return
 
         # Collect extra story card paths
-        if self.extra_cards_enabled.get():
+        if self.extra_cards_disenabled.get():
             print("Skip Extra Story Cards enabled. Setting None for all extra card paths.")
             self.extra_cards_paths = {file: None for file in self.files}
 
@@ -214,7 +215,7 @@ class StoryFormatterApp:
             for card in story_cards:
                 card_title = card.get("title", "Unnamed Card")
                 card_keys = card.get("keys", "No keys available.")
-                card_description = card.get("value", "No description available.")
+                card_description = card.get("description", "No description available.")
                 story_cards_formatted += f"- **{card_title}:**\n  Keys: {card_keys}\n  Description: {card_description}\n\n"
 
             # Format options (branching scenarios)
@@ -232,8 +233,7 @@ class StoryFormatterApp:
                 # Multiple options: check for parentScenarioId: null to decide user question
                 plot_section = f"#### User Question\n{parent_scenarios[0].get('prompt', 'No prompt available.')}\n\n" if parent_scenarios else f"#### Plot\n{plot}\n\n"
                 for parent in parent_scenarios:
-                    options_formatted += f"### {parent.get('title', 'Untitled')}\n\n"
-                    options_formatted += f"{parent.get('prompt', 'No prompt available.')}\n\n"
+                    options_formatted += f"### Branches\n{parent.get('prompt', 'No prompt available.')}\n\n"
                     for child in child_scenarios.get(parent.get('id'), []):
                         options_formatted += f"- **{child.get('title', 'Untitled')}**:\n  {child.get('prompt', 'No prompt available.')}\n\n"
             else:
@@ -259,7 +259,6 @@ class StoryFormatterApp:
                 return "\n".join(lines)
 
             # Apply text wrapping to the prompt if it's too long
-            formatted_plot = break_text(plot)
             formatted_description = break_text(description)
             formatted_memory = break_text(memory)
             formatted_authors_note = break_text(authors_note)
@@ -268,22 +267,27 @@ class StoryFormatterApp:
             formatted_content = f"""\
 ### {title}
 
+#----------------------------------------#
+
 #### Description
 {formatted_description}
 
-{plot_section}
+#----------------------------------------#
+
+{plot_section}{options_formatted}#----------------------------------------#
 
 #### Memory
 {formatted_memory}
 
+#----------------------------------------#
+
 #### Author's Notes
 {formatted_authors_note}
 
+#----------------------------------------#
+
 #### Character Cards
 {story_cards_formatted}
-
-#### Branches
-{options_formatted}
 """
             # Save the formatted content to both .txt and .md files
             base_name = os.path.splitext(os.path.basename(input_file))[0]
