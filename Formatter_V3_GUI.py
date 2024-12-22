@@ -214,7 +214,7 @@ class StoryFormatterApp:
             for card in story_cards:
                 card_title = card.get("title", "Unnamed Card")
                 card_keys = card.get("keys", "No keys available.")
-                card_description = card.get("description", "No description available.")
+                card_description = card.get("value", "No description available.")
                 story_cards_formatted += f"- **{card_title}:**\n  Keys: {card_keys}\n  Description: {card_description}\n\n"
 
             # Format options (branching scenarios)
