@@ -1,0 +1,16 @@
+name: Build AI Dungeon Scenario Formatter
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install PyInstaller
+        run: pip install pyinstaller
+
+      - name: Build Executable
+        run: pyinstaller --onefile --noconsole --icon="icon.ico" --name="AI Dungeon Scenario Formatter" Formatter_V3.5_GUI.py

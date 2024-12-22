@@ -8,9 +8,8 @@ venv/
 # Exe-fication folder
 build/
 
-# Ignore icon file
-# icon.ico
-icon.png
+# Ignore exe file
+*.exe
 
 # Ignore distribution folder
 dist/
@@ -28,4 +27,4 @@ dist/
 # Old Code
 Deprecated_*
 
-Depricated/
+Deprecated/
