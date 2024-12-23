@@ -17,8 +17,8 @@ jobs:
       - name: Build Executable with Icon
         run: pyinstaller --onefile --noconsole --icon="icon.ico" --name="AI Dungeon Scenario Formatter" Formatter_V3.5_GUI.py
 
-      - name: Upload Executable
-        uses: actions/upload-artifact@v3
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
         with:
           name: AI-Dungeon-Scenario-Formatter
-          path: dist/AI\ Dungeon\ Scenario\ Formatter.exe
+          path: dist/AI Dungeon Scenario Formatter.exe # Path to the PyInstaller output
